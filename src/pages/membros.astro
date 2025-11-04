@@ -1,0 +1,27 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import UserCard from '@components/community/UserCard.astro';
+import { mockUsers } from '@lib/mockData.ts';
+
+// Adaptar a estrutura antiga (User) para UserProfile esperado por UserCard
+const usersProfile = mockUsers.map((u) => ({
+  id: u.id,
+  name: u.name,
+  handle: u.username,
+  avatarUrl: u.avatar
+}));
+---
+
+<BaseLayout title="Membros" description="Conheça os membros da comunidade Alfa Research">
+  <main class="min-h-screen bg-zinc-900">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <h1 class="text-3xl font-bold mb-6 text-white">Membros da Comunidade</h1>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {usersProfile.map(user => (
+          <UserCard user={user} />
+        ))}
+      </div>
+    </div>
+  </main>
+</BaseLayout>

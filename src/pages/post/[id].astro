@@ -1,0 +1,65 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { mockUsersNew as mockUsers, mockPostsNew as mockPosts, mockComments } from '@lib/mockData.ts';
+import type { UserProfile, Post, Comment } from '@lib/mockData.ts';
+import PostCard from '@components/community/PostCard.astro';
+import CommentCard from '@components/community/CommentCard.astro';
+import NewCommentForm from '@components/community/NewCommentForm.astro';
+
+export async function getStaticPaths() {
+  return mockPosts.map((post) => ({
+    params: { id: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props as { post: Post };
+
+const author = mockUsers.find((user) => user.id === post.authorId);
+if (!author) throw new Error('Autor não encontrado');
+
+const postComments = mockComments.filter((comment) => comment.postId === post.id);
+---
+
+<BaseLayout title={`Post de ${author.name}`} description={post.content.substring(0, 150)}>
+  <div class="max-w-4xl mx-auto px-4 py-8">
+    <PostCard
+      authorName={author.name}
+      authorHandle={author.handle}
+      avatarUrl={author.avatarUrl}
+      postContent={post.content}
+      likesCount={post.likes}
+      commentsCount={post.comments}
+      tags={post.tags}
+      postId={post.id}
+      isDetailPage={true}
+    />
+
+    <div class="mt-8 bg-zinc-800 rounded-lg border border-zinc-700 overflow-hidden">
+      <h2 class="text-xl font-semibold p-4 border-b border-zinc-700">
+        Comentários ({postComments.length})
+      </h2>
+
+      <NewCommentForm postId={post.id} />
+
+      <div class="flex flex-col">
+        {postComments.length > 0 ? (
+          postComments.map((comment) => {
+            const commentAuthor = mockUsers.find((user) => user.id === comment.authorId);
+            if (!commentAuthor) return null;
+
+            return (
+              <CommentCard
+                commentContent={comment.content}
+                author={commentAuthor}
+                timestamp={comment.createdAt}
+              />
+            );
+          })
+        ) : (
+          <p class="p-4 text-zinc-400">Nenhum comentário ainda.</p>
+        )}
+      </div>
+    </div>
+  </div>
+</BaseLayout>

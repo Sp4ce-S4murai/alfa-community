@@ -1,0 +1,26 @@
+---
+import '../styles/global.css';
+import Navbar from '../components/core/Navbar.astro';
+
+export interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = 'Alfa Community', description = 'Comunidade de desenvolvedores' } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <Navbar />
+    <slot />
+  </body>
+</html>

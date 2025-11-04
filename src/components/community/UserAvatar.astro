@@ -1,0 +1,30 @@
+---
+export interface Props {
+  name?: string;
+  avatar?: string;
+  src?: string;
+  alt?: string;
+  size?: 'sm' | 'md' | 'lg' | 'small';
+}
+
+const defaultAvatar = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face';
+const props = Astro.props as Props;
+const finalName = props.alt ?? props.name ?? 'Usuário';
+const finalAvatar = props.src ?? props.avatar ?? defaultAvatar;
+const rawSize = props.size ?? 'md';
+const normalizedSize = rawSize === 'small' ? 'md' : rawSize;
+
+const sizeClasses = {
+  sm: 'w-8 h-8',
+  md: 'w-10 h-10',
+  lg: 'w-12 h-12'
+};
+---
+
+<div class={`${sizeClasses[normalizedSize]} rounded-full overflow-hidden border-2 border-zinc-600 hover:border-blue-500 transition-colors cursor-pointer`}>
+  <img 
+    src={finalAvatar} 
+    alt={finalName}
+    class="w-full h-full object-cover"
+  />
+</div>

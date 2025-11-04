@@ -1,0 +1,41 @@
+---
+import UserAvatar from '@components/community/UserAvatar.astro';
+import Button from '@components/ui/Button.astro';
+import { mockUsers } from '@lib/mockData.ts';
+
+export interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props as Props;
+
+const loggedInUser = mockUsers[0]; // Simula o usuário 'João Silva' logado
+---
+
+{loggedInUser ? (
+  <div class={`bg-zinc-800 border border-zinc-700 rounded-lg p-4 flex gap-4 ${className}`}>
+    <!-- Avatar (Esquerda) -->
+    <UserAvatar name={loggedInUser.name} avatar={loggedInUser.avatar} size="md" />
+
+    <!-- Formulário (Direita) -->
+    <form class="flex-1 flex flex-col gap-3">
+      <textarea
+        name="content"
+        rows="3"
+        placeholder={`No que você está pensando, ${loggedInUser.name}?`}
+        class="w-full bg-zinc-900 text-zinc-100 p-3 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+      ></textarea>
+
+      <div class="flex justify-between items-center">
+        <!-- Ícones (Esquerda) -->
+        <div class="flex items-center gap-3 text-zinc-400">
+          <!-- Espaço reservado para ícones de upload, emojis, etc. -->
+        </div>
+
+        <!-- Botão (Direita) -->
+        <Button type="submit" variant="primary">
+          Publicar
+        </Button>
+      </div>
+    </form>
+  </div>
+) : null}

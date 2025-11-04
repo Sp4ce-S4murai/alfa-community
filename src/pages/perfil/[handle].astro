@@ -1,0 +1,55 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { mockUsersNew as mockUsers, mockPostsNew as mockPosts } from '@lib/mockData.ts';
+import type { UserProfile } from '@lib/mockData.ts';
+import UserAvatar from '@components/community/UserAvatar.astro';
+import PostCard from '@components/community/PostCard.astro';
+
+export async function getStaticPaths() {
+  return mockUsers.map((user) => ({
+    params: { handle: user.handle.replace('@', '') },
+    props: { user },
+  }));
+}
+
+const { user } = Astro.props as { user: UserProfile };
+
+const userPosts = mockPosts.filter((post) => post.authorId === user.id);
+---
+
+<BaseLayout title={`Perfil de ${user.name}`} description={user.bio || `Perfil de ${user.name}`}>
+  <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row items-center md:items-start p-6 bg-zinc-800 rounded-lg border border-zinc-700">
+      <UserAvatar name={user.name} avatar={user.avatarUrl} size="lg" />
+      <div class="mt-4 md:mt-0 md:ml-6 text-center md:text-left">
+        <h1 class="text-3xl font-bold text-white">{user.name}</h1>
+        <p class="text-xl text-zinc-400">{user.handle}</p>
+        <p class="mt-4 text-zinc-200">{user.bio || "Este membro ainda não adicionou uma bio."}</p>
+      </div>
+    </div>
+
+    <div class="mt-12">
+      <h2 class="text-2xl font-semibold mb-6 text-white">Posts de {user.name}</h2>
+      {userPosts.length > 0 ? (
+        <div class="flex flex-col gap-4">
+          {userPosts.map((post) => (
+            <PostCard
+              authorName={user.name}
+              authorHandle={user.handle}
+              avatarUrl={user.avatarUrl}
+              postContent={post.content}
+              likesCount={post.likes}
+              commentsCount={post.comments}
+              tags={post.tags}
+              postId={post.id}
+            />
+          ))}
+        </div>
+      ) : (
+        <p class="text-zinc-400 text-center bg-zinc-800 p-6 rounded-lg">
+          Este usuário ainda não fez nenhuma publicação.
+        </p>
+      )}
+    </div>
+  </div>
+</BaseLayout>

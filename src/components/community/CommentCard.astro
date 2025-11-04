@@ -1,0 +1,24 @@
+---
+import UserAvatar from '@components/community/UserAvatar.astro';
+import type { UserProfile } from '@lib/mockData';
+
+export interface Props {
+  commentContent: string;
+  author: UserProfile;
+  timestamp: string;
+}
+
+const { commentContent, author, timestamp } = Astro.props as Props;
+---
+
+<div class="flex gap-3 p-4 bg-zinc-800 border-b border-zinc-700">
+  <UserAvatar name={author.name} avatar={author.avatarUrl} size="md" />
+  <div class="flex-1">
+    <div class="flex items-center gap-2">
+      <a href={`/perfil/${author.handle.replace('@', '')}`} class="font-semibold text-zinc-100 hover:underline">{author.name}</a>
+      <span class="text-sm text-zinc-400">{author.handle}</span>
+      <span class="text-xs text-zinc-500">{timestamp}</span>
+    </div>
+    <p class="mt-2 text-zinc-200">{commentContent}</p>
+  </div>
+</div>
