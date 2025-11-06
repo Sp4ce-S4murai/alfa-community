@@ -1,0 +1,27 @@
+---
+import AuthLayout from '@layouts/AuthLayout.astro';
+import Button from '@components/ui/Button.astro';
+---
+
+<AuthLayout title="Cadastro" description="Crie sua conta Alfa Community">
+  <div class="w-full max-w-md p-8 bg-zinc-800 rounded-lg border border-zinc-700">
+    <h1 class="text-2xl font-bold text-center text-teal-400 mb-2">Alfa Community</h1>
+    <h2 class="text-lg text-center text-zinc-200 mb-6">Crie sua conta</h2>
+    <form class="flex flex-col gap-4">
+      <label for="name" class="text-sm font-medium text-zinc-300">Nome</label>
+      <input type="text" name="name" id="name" class="input-style" />
+
+      <label for="email" class="text-sm font-medium text-zinc-300">Email</label>
+      <input type="email" name="email" id="email" class="input-style" />
+
+      <label for="password" class="text-sm font-medium text-zinc-300">Senha</label>
+      <input type="password" name="password" id="password" class="input-style" />
+
+      <Button type="submit" variant="primary" class="mt-4">Criar conta</Button>
+
+      <p class="text-center text-sm text-zinc-400 mt-4">
+        Já tem uma conta? <a href="/login" class="font-medium text-teal-400 hover:underline">Faça login</a>
+      </p>
+    </form>
+  </div>
+</AuthLayout>

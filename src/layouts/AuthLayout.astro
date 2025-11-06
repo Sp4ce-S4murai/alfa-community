@@ -1,0 +1,26 @@
+---
+import '../styles/global.css';
+
+export interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = 'Autenticação · Alfa Community', description = 'Páginas de login e cadastro' } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="flex items-center justify-center min-h-screen bg-zinc-900">
+    <main>
+      <slot />
+    </main>
+  </body>
+  </html>
