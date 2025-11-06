@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { createSupabaseServerClient } from '@lib/supabase';
+import { createSupabaseServerClient } from '../../lib/supabase';
 import Button from '@components/ui/Button.astro';
 import AvatarUploader from '@components/community/AvatarUploader.astro';
 
@@ -91,7 +91,7 @@ if (error || !profile) {
 </BaseLayout>
 
 <script>
-  import { supabase } from '@lib/supabase'; // Cliente vanilla
+  import { supabase } from '../../lib/supabase'; // Cliente vanilla
 
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('profile-form');

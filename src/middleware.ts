@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@lib/supabase';
+import { createSupabaseServerClient } from './lib/supabase';
 import type { APIContext, MiddlewareNext } from 'astro';
 
 // Define quais rotas são protegidas

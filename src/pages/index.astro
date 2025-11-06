@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import StatsCard from '../components/ui/StatsCard.astro';
 import PostCard from '../components/community/PostCard.astro';
 import NewPostForm from '@components/community/NewPostForm.astro';
-import { createSupabaseServerClient } from '@lib/supabase.ts';
+import { createSupabaseServerClient } from '../lib/supabase.ts';
 
 const supabase = createSupabaseServerClient(Astro.cookies);
 

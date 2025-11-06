@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import UserCard from '@components/community/UserCard.astro';
-import { createSupabaseServerClient } from '@lib/supabase';
+import { createSupabaseServerClient } from '../lib/supabase';
 
 // 1. Lógica do Servidor (como antes)
 const supabase = createSupabaseServerClient(Astro.cookies);
