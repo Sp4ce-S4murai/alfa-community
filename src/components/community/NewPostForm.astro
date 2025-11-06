@@ -1,41 +1,93 @@
 ---
+import type { User } from '@supabase/supabase-js';
 import UserAvatar from '@components/community/UserAvatar.astro';
 import Button from '@components/ui/Button.astro';
-import { mockUsers } from '@lib/mockData.ts';
 
-export interface Props {
+// 1. Definição das Props
+interface Props {
+  user: User | null;
   class?: string;
 }
-const { class: className } = Astro.props as Props;
+const { user, class: className } = Astro.props as Props;
 
-const loggedInUser = mockUsers[0]; // Simula o usuário 'João Silva' logado
+// Se, por algum motivo, o usuário for nulo, não renderize o formulário
+if (!user) return null;
+
+// Pega os metadados do usuário
+const avatarUrl = user.user_metadata?.avatar_url;
+const fullName = user.user_metadata?.full_name || user.email;
 ---
 
-{loggedInUser ? (
-  <div class={`bg-zinc-800 border border-zinc-700 rounded-lg p-4 flex gap-4 ${className}`}>
-    <!-- Avatar (Esquerda) -->
-    <UserAvatar name={loggedInUser.name} avatar={loggedInUser.avatar} size="md" />
+<div class:list={["bg-zinc-800 border border-zinc-700 rounded-lg p-4 flex gap-4", className]}>
+  <UserAvatar src={avatarUrl} alt={fullName} />
 
-    <!-- Formulário (Direita) -->
-    <form class="flex-1 flex flex-col gap-3">
-      <textarea
-        name="content"
-        rows="3"
-        placeholder={`No que você está pensando, ${loggedInUser.name}?`}
-        class="w-full bg-zinc-900 text-zinc-100 p-3 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
-      ></textarea>
+  <form id="new-post-form" data-user-id={user.id} class="flex-1 flex flex-col gap-3">
+    
+    <textarea 
+      id="post-content" 
+      name="content" 
+      rows="3" 
+      placeholder={`No que você está pensando, ${fullName}?`} 
+      class="w-full bg-zinc-900 text-zinc-100 p-3 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" 
+    ></textarea> 
+    
+    <div class="flex justify-between items-center"> 
+      <div></div> 
+      <Button type="submit" variant="primary" id="submit-button"> 
+        Publicar 
+      </Button> 
+    </div> 
+  </form> 
+</div>
 
-      <div class="flex justify-between items-center">
-        <!-- Ícones (Esquerda) -->
-        <div class="flex items-center gap-3 text-zinc-400">
-          <!-- Espaço reservado para ícones de upload, emojis, etc. -->
-        </div>
+<script>
+  import { supabase } from '@lib/supabase';
 
-        <!-- Botão (Direita) -->
-        <Button type="submit" variant="primary">
-          Publicar
-        </Button>
-      </div>
-    </form>
-  </div>
-) : null}
+  // Seleciona os elementos do formulário
+  const form = document.getElementById('new-post-form');
+  if (form) {
+    const submitButton = form.querySelector('#submit-button');
+    const textArea = form.querySelector('#post-content');
+
+    // Pega o ID do autor que passamos via data-attribute
+    const authorId = form.dataset.userId;
+
+    // Adiciona o listener de 'submit'
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault(); // Impede o recarregamento da página
+
+      if (!submitButton || !textArea || !authorId) return;
+
+      // Pega o conteúdo
+      const content = textArea.value;
+      if (content.trim().length === 0) {
+        alert('O post não pode estar vazio.');
+        return;
+      }
+
+      // Desativa o botão
+      submitButton.setAttribute('disabled', 'true');
+      submitButton.innerHTML = 'Publicando...';
+
+      // 4. Executa o INSERT no Supabase
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          content: content,
+          author_id: authorId,
+        });
+
+      if (error) {
+        // 5. Tratamento de Erro
+        alert('Erro ao publicar o post: ' + error.message);
+        submitButton.removeAttribute('disabled');
+        submitButton.innerHTML = 'Publicar';
+      } else {
+        // 6. Sucesso!
+        // Limpa o textarea e recarrega a página para mostrar o novo post
+        textArea.value = '';
+        window.location.reload();
+      }
+    });
+  }
+</script>

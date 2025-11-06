@@ -7,6 +7,7 @@ import Button from '@components/ui/Button.astro';
   <div class="w-full max-w-md p-8 bg-zinc-800 rounded-lg border border-zinc-700">
     <h1 class="text-2xl font-bold text-center text-teal-400 mb-2">Alfa Community</h1>
     <h2 class="text-lg text-center text-zinc-200 mb-6">Acessar sua conta</h2>
+    
     <form class="flex flex-col gap-4" id="login-form">
       <label for="email" class="text-sm font-medium text-zinc-300">Email</label>
       <input type="email" name="email" id="email" class="input-style" />
@@ -23,5 +24,60 @@ import Button from '@components/ui/Button.astro';
       </p>
     </form>
   </div>
-  <script type="module" src="/src/pages/login.client.ts"></script>
+
+  <script type="module">
+    import { supabase } from '/src/lib/supabase.ts';
+
+    // Aguarda o DOM estar carregado para anexar handlers com segurança
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('login-form');
+      const submitButton = document.getElementById('login-button');
+      const errorMessageDiv = document.getElementById('error-message');
+
+      form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (!submitButton || !errorMessageDiv) return;
+
+        // Desativa o botão
+        submitButton.setAttribute('disabled', 'true');
+        submitButton.innerHTML = 'Entrando...';
+        errorMessageDiv.textContent = '';
+
+        // Coleta dados
+        if (!(form instanceof HTMLFormElement)) {
+          errorMessageDiv.textContent = 'Formulário inválido.';
+          submitButton.removeAttribute('disabled');
+          submitButton.innerHTML = 'Entrar';
+          return;
+        }
+        const formData = new FormData(form);
+        const email = formData.get('email');
+        const password = formData.get('password');
+
+        if (typeof email !== 'string' || typeof password !== 'string') {
+          errorMessageDiv.textContent = 'Informe email e senha.';
+          submitButton.removeAttribute('disabled');
+          submitButton.innerHTML = 'Entrar';
+          return;
+        }
+
+        // Chama o Supabase Auth para Login
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          // Erro
+          errorMessageDiv.textContent = error.message;
+          submitButton.removeAttribute('disabled');
+          submitButton.innerHTML = 'Entrar';
+        } else {
+          // Sucesso! Agora o cookie está definido e o middleware lerá a sessão
+          window.location.href = '/';
+        }
+      });
+    });
+  </script>
 </AuthLayout>

@@ -2,13 +2,37 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import StatsCard from '../components/ui/StatsCard.astro';
 import PostCard from '../components/community/PostCard.astro';
-import { mockUsersNew, mockPostsNew } from '../lib/mockData';
 import NewPostForm from '@components/community/NewPostForm.astro';
+import { createSupabaseServerClient } from '@lib/supabase.ts';
 
-// Lógica para os stats
-const totalMembros = mockUsersNew.length;
-const totalPosts = mockPostsNew.length;
-const totalOnline = 0; // pode ser fixo por agora
+const supabase = createSupabaseServerClient(Astro.cookies);
+
+// Pega o usuário logado (do middleware)
+const user = Astro.locals.user;
+
+// Busca os posts reais do banco de dados
+const { data: posts, error } = await supabase
+  .from('posts')
+  .select(`
+    id,
+    content,
+    created_at,
+    profiles (
+      full_name,
+      handle,
+      avatar_url
+    )
+  `)
+  .order('created_at', { ascending: false });
+
+if (error) {
+  console.error('Erro ao buscar posts:', error.message);
+}
+
+// (A lógica de Stats Card pode ser atualizada depois, por enquanto focamos no feed)
+const totalMembros = 0; // TODO
+const totalPosts = posts?.length || 0;
+const totalOnline = 0; // TODO
 ---
 
 <BaseLayout title="Alfa Community - Home" description="Bem-vindo à comunidade de desenvolvedores Alfa">
@@ -27,28 +51,33 @@ const totalOnline = 0; // pode ser fixo por agora
           <StatsCard value={totalOnline} label="Online" />
         </div>
 
-        <NewPostForm class="mb-6" />
+        <NewPostForm class="mb-6" user={user} />
 
         <!-- Seção Feed -->
         <div class="space-y-4">
           <h3 class="text-xl font-semibold text-white mb-4">Posts Recentes</h3>
-          {mockPostsNew.map(post => {
-            const author = mockUsersNew.find(user => user.id === post.authorId);
-            if (!author) return null; // Tratamento de erro simples
-            
-            return (
-              <PostCard 
-                authorName={author.name}
-                authorHandle={author.handle}
-                avatarUrl={author.avatarUrl}
-                postContent={post.content}
-                likesCount={post.likes}
-                commentsCount={post.comments}
-                tags={post.tags}
-                postId={post.id}
-              />
-            );
-          })}
+          <NewPostForm class="mb-6" user={user} />
+          <div class="flex flex-col gap-4">
+            {posts && posts.length > 0 ? (
+              posts.map((post) => (
+                <PostCard
+                  postId={post.id}
+                  authorName={post.profiles.full_name}
+                  authorHandle={post.profiles.handle}
+                  avatarUrl={post.profiles.avatar_url}
+                  postContent={post.content}
+                  likesCount={0}
+                  commentsCount={0}
+                  tags={[]}
+                  isDetailPage={false}
+                />
+              ))
+            ) : (
+              <p class="text-zinc-400 text-center bg-zinc-800 p-6 rounded-lg">
+                Nenhum post ainda. Seja o primeiro a publicar!
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
