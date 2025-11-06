@@ -1,12 +1,11 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { createSupabaseServerClient } from '../../lib/supabase';
 import PostCard from '@components/community/PostCard.astro';
 import CommentCard from '@components/community/CommentCard.astro';
 import NewCommentForm from '@components/community/NewCommentForm.astro';
 
 // 1. LÓGICA DO LADO DO SERVIDOR (SSR)
-const supabase = createSupabaseServerClient(Astro.cookies);
+const supabase = Astro.locals.supabase;
 
 // 2. Obtém o 'id' do post do URL (ex: /post/123)
 const { id: postId } = Astro.params;

@@ -1,11 +1,10 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { createSupabaseServerClient } from '../../lib/supabase';
 import Button from '@components/ui/Button.astro';
 import AvatarUploader from '@components/community/AvatarUploader.astro';
 
 // 1. LÓGICA DO LADO DO SERVIDOR (SSR)
-const supabase = createSupabaseServerClient(Astro.cookies);
+const supabase = Astro.locals.supabase;
 
 // 2. Obtém o utilizador logado
 const { data: { user } } = await supabase.auth.getUser();

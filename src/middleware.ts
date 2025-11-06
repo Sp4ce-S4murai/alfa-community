@@ -1,46 +1,52 @@
-import { createSupabaseServerClient } from './lib/supabase';
+import { createServerClient } from '@supabase/ssr';
 import type { APIContext, MiddlewareNext } from 'astro';
 
-// Define quais rotas são protegidas
-const protectedRoutes = ['/', '/membros', '/cursos', '/perfil', '/post'];
-
-// Define rotas que um utilizador logado NÃO deve aceder
+// Rotas protegidas (como tínhamos antes)
+const protectedRoutes = ['/', '/membros', '/cursos', '/perfil', '/post', '/conta'];
 const authRoutes = ['/login', '/cadastro'];
 
-export async function onRequest(context: APIContext, next: MiddlewareNext) {
-  
-  // 1. Cria o cliente Supabase para o servidor (lê os cookies)
-  const supabase = createSupabaseServerClient(context.cookies);
+// 1. Criamos o cliente DENTRO do middleware
+export const onRequest = async (context: APIContext, next: MiddlewareNext) => {
+  const supabase = createServerClient(
+    import.meta.env.PUBLIC_SUPABASE_URL!,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => context.cookies.get(name)?.value,
+        set: (name: string, value: string, options?: any) => {
+          context.cookies.set(name, value, { ...(options ?? {}), path: options?.path ?? '/' });
+        },
+        remove: (name: string, options?: any) => {
+          context.cookies.delete(name, { ...(options ?? {}), path: options?.path ?? '/' });
+        },
+      },
+    }
+  );
 
-  // 2. Tenta obter o utilizador
-  // Esta única linha lê o cookie e valida a sessão
+  // Disponibiliza o cliente para as páginas SSR
+  context.locals.supabase = supabase;
+
+  // 2. Obtém o utilizador autenticado
   const { data: { user } } = await supabase.auth.getUser();
-
-  // 3. Salva o utilizador no 'context.locals' para as páginas .astro usarem
   if (user) {
     context.locals.user = user;
   }
 
-  // ---- LÓGICA DE REDIRECIONAMENTO ----
-
+  // 3. Lógica de proteção de rotas
   const currentPath = context.url.pathname;
-  const isProtectedRoute = protectedRoutes.some(route => {
-    if (route === '/') return currentPath === '/';
-    return currentPath.startsWith(route);
-  });
+  const isProtectedRoute = protectedRoutes.some(
+    (route) => (currentPath.startsWith(route) && route.length > 1) || currentPath === '/'
+  );
   const isAuthRoute = authRoutes.includes(currentPath);
 
-  // 4. Se estiver numa rota protegida e NÃO tiver utilizador
   if (isProtectedRoute && !user) {
     return context.redirect('/login');
   }
 
-  // 5. Se estiver numa rota de login (ex: /login) e TIVER utilizador
   if (isAuthRoute && user) {
-    // Redireciona para o 'início' (o feed)
     return context.redirect('/');
   }
-  
-  // 6. Se nada disto acontecer, apenas continua para a página
+
+  // 4. Segue o fluxo normal
   return next();
-}
+};
