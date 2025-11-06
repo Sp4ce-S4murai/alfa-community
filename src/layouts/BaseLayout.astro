@@ -1,26 +1,32 @@
 ---
-import '../styles/global.css';
-import Navbar from '../components/core/Navbar.astro';
+import type { User } from '@supabase/supabase-js';
+import Navbar from '@components/core/Navbar.astro';
+import '@styles/global.css';
 
+// 1. Propriedades
 export interface Props {
-  title?: string;
-  description?: string;
+  title: string;
+  description: string;
 }
+const { title, description } = Astro.props;
 
-const { title = 'Alfa Community', description = 'Comunidade de desenvolvedores' } = Astro.props;
+// 2. Obter o usuário do Middleware
+// O 'Astro.locals.user' foi definido em src/middleware.ts
+const user = Astro.locals.user as User | null;
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content={description} />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width" />
     <title>{title}</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="description" content={description} />
   </head>
   <body>
-    <Navbar />
-    <slot />
+    <Navbar user={user} />
+    <main>
+      <slot />
+    </main>
   </body>
 </html>

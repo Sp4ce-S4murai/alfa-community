@@ -1,5 +1,11 @@
 ---
-import UserAvatar from '../community/UserAvatar.astro';
+import LogoutButton from '@components/core/LogoutButton.astro';
+import UserAvatar from '@components/community/UserAvatar.astro';
+import type { User } from '@supabase/supabase-js';
+
+interface Props { user: User | null; }
+const { user } = Astro.props;
+---
 ---
 
 <header class="bg-zinc-800/70 backdrop-blur-md border-b border-zinc-700 sticky top-0 z-50">
@@ -25,17 +31,30 @@ import UserAvatar from '../community/UserAvatar.astro';
         </a>
       </div>
 
-      <!-- Lado Direito - User Avatar e Notificações -->
-      <div class="flex items-center space-x-4">
-        <!-- Ícone de Notificações -->
-        <button class="text-zinc-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-zinc-700">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-          </svg>
-        </button>
-
-        <!-- User Avatar -->
-        <UserAvatar name="João Silva" size="md" />
+      <!-- Lado Direito - User/Actions -->
+      <div class="flex items-center gap-4">
+        {user ? (
+          <>
+            <span class="text-sm text-zinc-200">
+              Olá, {user.user_metadata.full_name || user.email}
+            </span>
+            <UserAvatar 
+              src={user.user_metadata?.avatar_url}
+              alt={user.user_metadata?.full_name}
+              size="md"
+            />
+            <LogoutButton />
+          </>
+        ) : (
+          <>
+            <a href="/login" class="text-sm font-medium text-zinc-300 hover:text-teal-400">
+              Login
+            </a>
+            <a href="/cadastro" class="text-sm font-medium bg-teal-500 text-zinc-900 px-3 py-1.5 rounded-md hover:bg-teal-400 transition-colors">
+              Cadastro
+            </a>
+          </>
+        )}
       </div>
     </div>
   </nav>
