@@ -1,0 +1,99 @@
+---
+import type { User } from '@supabase/supabase-js';
+import UserAvatar from '@components/community/UserAvatar.astro';
+import Button from '@components/ui/Button.astro';
+
+interface Props {
+  user: User;
+  profile: any; // O objeto da tabela 'profiles'
+}
+const { user, profile } = Astro.props;
+---
+
+<div id="avatar-uploader" data-user-id={user.id} class="flex flex-col items-center gap-4 p-6 bg-zinc-800 rounded-lg border border-zinc-700">
+  
+  <UserAvatar src={profile.avatar_url} alt={profile.full_name} size="xlarge" />
+
+  <div id="upload-status" class="text-sm text-zinc-400"></div>
+
+  <input type="file" id="file-input" accept="image/png, image/jpeg" class="hidden" />
+
+  <label for="file-input" class="cursor-pointer bg-teal-500 text-zinc-900 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-teal-400 transition-colors">
+    Trocar Foto
+  </label>
+</div>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const uploader = document.getElementById('avatar-uploader');
+    if (!uploader) return;
+
+    const fileInput = uploader.querySelector('#file-input');
+    const statusMessage = uploader.querySelector('#upload-status');
+    const userId = (uploader as HTMLElement).dataset.userId;
+
+    if (!fileInput || !statusMessage || !userId) return;
+
+    // 1. Quando um arquivo é selecionado
+    fileInput.addEventListener('change', async (event) => {
+      const target = event.target as HTMLInputElement;
+      if (!target.files || target.files.length === 0) {
+        return; // Nenhum arquivo selecionado
+      }
+
+      const file = target.files[0];
+      const fileExt = file.name.split('.').pop();
+      // O nome do arquivo no Supabase (usamos Date.now() para evitar cache)
+      // O path corresponde às regras da Fase 26: {userId}/...
+      const filePath = `${userId}/avatar-${Date.now()}.${fileExt}`;
+
+      statusMessage.innerHTML = 'Enviando...';
+
+      // 2. Faz o upload para o Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true // 'upsert' permite sobrescrever o avatar anterior
+        });
+
+      if (uploadError) {
+        statusMessage.innerHTML = 'Erro no upload: ' + uploadError.message;
+        return;
+      }
+
+      // 3. Obtém o URL público do arquivo que acabamos de enviar
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      if (!publicUrl) {
+        statusMessage.innerHTML = 'Erro ao obter o URL público.';
+        return;
+      }
+
+      // 4. Atualiza a tabela 'profiles' com o novo URL
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', userId);
+
+      // 5. Atualiza o 'user_metadata' no Auth (para a Navbar)
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { 
+          avatar_url: publicUrl 
+        }
+      });
+
+      if (profileError || authError) {
+        statusMessage.innerHTML = 'Erro ao atualizar o perfil. Tente recarregar.';
+      } else {
+        // 6. Sucesso! Recarrega a página para ver todas as mudanças
+        statusMessage.innerHTML = 'Avatar atualizado!';
+        window.location.reload();
+      }
+    });
+  });
+</script>

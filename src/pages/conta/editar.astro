@@ -2,6 +2,7 @@
 import BaseLayout from '@layouts/BaseLayout.astro';
 import { createSupabaseServerClient } from '@lib/supabase';
 import Button from '@components/ui/Button.astro';
+import AvatarUploader from '@components/community/AvatarUploader.astro';
 
 // 1. LÓGICA DO LADO DO SERVIDOR (SSR)
 const supabase = createSupabaseServerClient(Astro.cookies);
@@ -33,6 +34,8 @@ if (error || !profile) {
 <BaseLayout title="Editar Perfil" description="Atualize os seus dados">
   <div class="max-w-2xl mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-6">Editar Perfil</h1>
+
+    <AvatarUploader user={user} profile={profile} />
 
     <form id="profile-form" class="mt-8 flex flex-col gap-4">
       <div id="success-message" class="hidden p-3 rounded-md bg-green-800 border border-green-600 text-green-100">
