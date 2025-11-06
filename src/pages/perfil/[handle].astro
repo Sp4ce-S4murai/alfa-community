@@ -1,55 +1,90 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { mockUsersNew as mockUsers, mockPostsNew as mockPosts } from '@lib/mockData.ts';
-import type { UserProfile } from '@lib/mockData.ts';
-import UserAvatar from '@components/community/UserAvatar.astro';
+import { createSupabaseServerClient } from '@lib/supabase';
 import PostCard from '@components/community/PostCard.astro';
+import CommentCard from '@components/community/CommentCard.astro';
+import NewCommentForm from '@components/community/NewCommentForm.astro';
 
-export async function getStaticPaths() {
-  return mockUsers.map((user) => ({
-    params: { handle: user.handle.replace('@', '') },
-    props: { user },
-  }));
+// 1. LÓGICA DO LADO DO SERVIDOR (SSR)
+const supabase = createSupabaseServerClient(Astro.cookies);
+
+// 2. Obtém o 'id' do post do URL (ex: /post/123)
+const { id: postId } = Astro.params;
+
+if (!postId) {
+  return Astro.redirect('/'); // Redireciona se não houver ID
 }
 
-const { user } = Astro.props as { user: UserProfile };
+// 3. Busca o Post Principal E o perfil do seu autor (JOIN)
+const { data: post, error: postError } = await supabase
+  .from('posts')
+  .select(`
+    *,
+    profiles (
+      full_name,
+      handle,
+      avatar_url
+    )
+  `)
+  .eq('id', postId)
+  .single();
 
-const userPosts = mockPosts.filter((post) => post.authorId === user.id);
+// 4. Se o post não existir, retorna um 404
+if (!post || postError) {
+  return new Response("Post não encontrado", { status: 404 });
+}
+
+// 5. Busca os Comentários E os perfis dos seus autores (JOIN)
+const { data: comments, error: commentsError } = await supabase
+  .from('comments')
+  .select(`
+    *,
+    profiles (
+      full_name,
+      handle,
+      avatar_url
+    )
+  `)
+  .eq('post_id', postId) // Filtra pelo ID do post
+  .order('created_at', { ascending: true }); // Comentários mais antigos primeiro
+
+const hasComments = comments && comments.length > 0;
 ---
 
-<BaseLayout title={`Perfil de ${user.name}`} description={user.bio || `Perfil de ${user.name}`}>
+<BaseLayout title={`Post de ${post.profiles.full_name}`} description={post.content.substring(0, 150)}>
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <div class="flex flex-col md:flex-row items-center md:items-start p-6 bg-zinc-800 rounded-lg border border-zinc-700">
-      <UserAvatar name={user.name} avatar={user.avatarUrl} size="lg" />
-      <div class="mt-4 md:mt-0 md:ml-6 text-center md:text-left">
-        <h1 class="text-3xl font-bold text-white">{user.name}</h1>
-        <p class="text-xl text-zinc-400">{user.handle}</p>
-        <p class="mt-4 text-zinc-200">{user.bio || "Este membro ainda não adicionou uma bio."}</p>
-      </div>
-    </div>
+    
+    <PostCard
+      postId={post.id}
+      postContent={post.content}
+      tags={[]}
+      likesCount={0}
+      commentsCount={comments?.length || 0}
+      isDetailPage={true}
+      
+      authorName={post.profiles.full_name}
+      authorHandle={post.profiles.handle}
+      avatarUrl={post.profiles.avatar_url}
+    />
 
-    <div class="mt-12">
-      <h2 class="text-2xl font-semibold mb-6 text-white">Posts de {user.name}</h2>
-      {userPosts.length > 0 ? (
-        <div class="flex flex-col gap-4">
-          {userPosts.map((post) => (
-            <PostCard
-              authorName={user.name}
-              authorHandle={user.handle}
-              avatarUrl={user.avatarUrl}
-              postContent={post.content}
-              likesCount={post.likes}
-              commentsCount={post.comments}
-              tags={post.tags}
-              postId={post.id}
-            />
-          ))}
-        </div>
-      ) : (
-        <p class="text-zinc-400 text-center bg-zinc-800 p-6 rounded-lg">
-          Este usuário ainda não fez nenhuma publicação.
-        </p>
-      )}
+    <div class="mt-8 bg-zinc-800 rounded-lg border border-zinc-700 overflow-hidden">
+      <h2 class="text-xl font-semibold p-4 border-b border-zinc-700">
+        Comentários ({comments?.length || 0})
+      </h2>
+
+      <NewCommentForm postId={post.id} />
+
+      <div class="flex flex-col">
+        {hasComments ? (
+          comments.map(comment => (
+            <CommentCard comment={comment} />
+          ))
+        ) : (
+          <p class="p-6 text-center text-zinc-400">
+            Nenhum comentário ainda. Seja o primeiro a comentar!
+          </p>
+        )}
+      </div>
     </div>
   </div>
 </BaseLayout>

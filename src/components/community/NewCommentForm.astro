@@ -1,28 +1,89 @@
 ---
+import type { User } from '@supabase/supabase-js';
 import UserAvatar from '@components/community/UserAvatar.astro';
 import Button from '@components/ui/Button.astro';
-import { mockUsers } from '@lib/mockData.ts';
 
-interface Props { postId: string }
-const { postId } = Astro.props as Props;
-const loggedInUser = mockUsers[0]; // Simula o usuário 'João Silva' logado
-const avatarUrl = (loggedInUser as any).avatarUrl ?? loggedInUser.avatar;
+// 1. Definição das Props
+interface Props {
+  postId: number | string;
+  user: User | null;
+}
+const { postId, user } = Astro.props;
+
+// 2. Se não houver utilizador, não renderize o formulário de comentário
+if (!user) return null;
+
+// 3. Prepara os dados do utilizador
+const avatarUrl = user.user_metadata?.avatar_url;
+const fullName = user.user_metadata?.full_name || user.email;
 ---
 
-{loggedInUser ? (
-  <div class="flex gap-3 p-4 border-t border-zinc-700">
-    <!-- Avatar -->
-    <UserAvatar src={avatarUrl} alt={loggedInUser.name} size="small" />
+<div class="flex gap-3 p-4 border-t border-zinc-700">
+  <UserAvatar src={avatarUrl} alt={fullName} size="small" />
 
-    <!-- Formulário -->
-    <form class="flex-1 flex gap-2">
-      <input
-        type="text"
-        name="comment"
-        placeholder="Escreva um comentário..."
-        class="w-full bg-zinc-900 text-zinc-100 px-4 py-2 rounded-full border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
-      />
-      <Button type="submit" variant="primary" class="rounded-full">Enviar</Button>
-    </form>
-  </div>
-) : null}
+  <form 
+    id="new-comment-form" 
+    data-user-id={user.id} 
+    data-post-id={postId} 
+    class="flex-1 flex gap-2"
+  >
+    <input
+      id="comment-content"
+      type="text"
+      name="comment"
+      placeholder="Escreva um comentário..."
+      class="w-full bg-zinc-900 text-zinc-100 px-4 py-2 rounded-full border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+    />
+    <Button type="submit" variant="primary" id="submit-button" class="rounded-full">
+      Enviar
+    </Button>
+  </form>
+</div>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('new-comment-form');
+    if (form) {
+      const submitButton = form.querySelector('#submit-button');
+      const input = form.querySelector('#comment-content');
+
+      // Pega os IDs que passámos
+      const authorId = (form as HTMLElement).dataset.userId;
+      const postId = (form as HTMLElement).dataset.postId;
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault(); // Impede o recarregamento
+
+        if (!submitButton || !input || !authorId || !postId) return;
+
+        const content = (input as HTMLInputElement).value;
+        if (content.trim().length === 0) return;
+
+        // Desativa o botão
+        submitButton.setAttribute('disabled', 'true');
+        submitButton.innerHTML = '...';
+
+        // 6. Executa o INSERT na tabela 'comments'
+        const { error } = await supabase
+          .from('comments')
+          .insert({
+            content: content,
+            author_id: authorId,
+            post_id: postId
+          });
+
+        if (error) {
+          alert("Erro ao enviar o comentário: " + error.message);
+          submitButton.removeAttribute('disabled');
+          submitButton.innerHTML = 'Enviar';
+        } else {
+          // 7. Sucesso! Recarrega a página para ver o novo comentário
+          (input as HTMLInputElement).value = ''; // Limpa o input
+          window.location.reload();
+        }
+      });
+    }
+  });
+</script>

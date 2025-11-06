@@ -1,27 +1,37 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import UserCard from '@components/community/UserCard.astro';
-import { mockUsers } from '@lib/mockData.ts';
+import { createSupabaseServerClient } from '@lib/supabase';
 
-// Adaptar a estrutura antiga (User) para UserProfile esperado por UserCard
-const usersProfile = mockUsers.map((u) => ({
-  id: u.id,
-  name: u.name,
-  handle: u.username,
-  avatarUrl: u.avatar
-}));
+// 1. Lógica do Servidor (como antes)
+const supabase = createSupabaseServerClient(Astro.cookies);
+const { data: profiles, error } = await supabase
+  .from('profiles')
+  .select('*')
+  .order('full_name', { ascending: true });
+
+if (error) {
+  console.error("Erro ao buscar perfis:", error.message);
+}
+
+// 2. Preparamos uma variável booleana simples (lógica no script, não no HTML)
+const hasProfiles = profiles && profiles.length > 0;
 ---
 
 <BaseLayout title="Membros" description="Conheça os membros da comunidade Alfa Research">
-  <main class="min-h-screen bg-zinc-900">
-    <div class="max-w-7xl mx-auto px-4 py-8">
-      <h1 class="text-3xl font-bold mb-6 text-white">Membros da Comunidade</h1>
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Membros da Comunidade</h1>
 
+    {hasProfiles ? (
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {usersProfile.map(user => (
-          <UserCard user={user} />
+        {profiles.map(profile => (
+          <UserCard profile={profile} />
         ))}
       </div>
-    </div>
-  </main>
+    ) : (
+      <p class="text-zinc-400 text-center bg-zinc-800 p-6 rounded-lg">
+        Ainda não há membros para exibir.
+      </p>
+    )}
+  </div>
 </BaseLayout>

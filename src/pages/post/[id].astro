@@ -1,63 +1,90 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { mockUsersNew as mockUsers, mockPostsNew as mockPosts, mockComments } from '@lib/mockData.ts';
-import type { UserProfile, Post, Comment } from '@lib/mockData.ts';
+import { createSupabaseServerClient } from '@lib/supabase';
 import PostCard from '@components/community/PostCard.astro';
 import CommentCard from '@components/community/CommentCard.astro';
 import NewCommentForm from '@components/community/NewCommentForm.astro';
 
-export async function getStaticPaths() {
-  return mockPosts.map((post) => ({
-    params: { id: post.id },
-    props: { post },
-  }));
+// 1. LÓGICA DO LADO DO SERVIDOR (SSR)
+const supabase = createSupabaseServerClient(Astro.cookies);
+
+// 2. Obtém o 'id' do post do URL (ex: /post/123)
+const { id: postId } = Astro.params;
+
+if (!postId) {
+  return Astro.redirect('/'); // Redireciona se não houver ID
 }
 
-const { post } = Astro.props as { post: Post };
+// 3. Busca o Post Principal E o perfil do seu autor (JOIN)
+const { data: post, error: postError } = await supabase
+  .from('posts')
+  .select(`
+    *,
+    profiles (
+      full_name,
+      handle,
+      avatar_url
+    )
+  `)
+  .eq('id', postId)
+  .single();
 
-const author = mockUsers.find((user) => user.id === post.authorId);
-if (!author) throw new Error('Autor não encontrado');
+// 4. Se o post não existir, retorna um 404
+if (!post || postError) {
+  return new Response("Post não encontrado", { status: 404 });
+}
 
-const postComments = mockComments.filter((comment) => comment.postId === post.id);
+// 5. Busca os Comentários E os perfis dos seus autores (JOIN)
+const { data: comments, error: commentsError } = await supabase
+  .from('comments')
+  .select(`
+    *,
+    profiles (
+      full_name,
+      handle,
+      avatar_url
+    )
+  `)
+  .eq('post_id', postId) // Filtra pelo ID do post
+  .order('created_at', { ascending: true }); // Comentários mais antigos primeiro
+
+// Usuário autenticado disponível via middleware
+const user = Astro.locals.user;
+const hasComments = comments && comments.length > 0;
 ---
 
-<BaseLayout title={`Post de ${author.name}`} description={post.content.substring(0, 150)}>
+<BaseLayout title={`Post de ${post.profiles.full_name}`} description={post.content.substring(0, 150)}>
   <div class="max-w-4xl mx-auto px-4 py-8">
+    
     <PostCard
-      authorName={author.name}
-      authorHandle={author.handle}
-      avatarUrl={author.avatarUrl}
-      postContent={post.content}
-      likesCount={post.likes}
-      commentsCount={post.comments}
-      tags={post.tags}
       postId={post.id}
+      postContent={post.content}
+      tags={[]}
+      likesCount={0}
+      commentsCount={comments?.length || 0}
       isDetailPage={true}
+      
+      authorName={post.profiles.full_name}
+      authorHandle={post.profiles.handle}
+      avatarUrl={post.profiles.avatar_url}
     />
 
     <div class="mt-8 bg-zinc-800 rounded-lg border border-zinc-700 overflow-hidden">
       <h2 class="text-xl font-semibold p-4 border-b border-zinc-700">
-        Comentários ({postComments.length})
+        Comentários ({comments?.length || 0})
       </h2>
 
-      <NewCommentForm postId={post.id} />
+      <NewCommentForm postId={post.id} user={user} />
 
       <div class="flex flex-col">
-        {postComments.length > 0 ? (
-          postComments.map((comment) => {
-            const commentAuthor = mockUsers.find((user) => user.id === comment.authorId);
-            if (!commentAuthor) return null;
-
-            return (
-              <CommentCard
-                commentContent={comment.content}
-                author={commentAuthor}
-                timestamp={comment.createdAt}
-              />
-            );
-          })
+        {hasComments ? (
+          comments.map(comment => (
+            <CommentCard comment={comment} />
+          ))
         ) : (
-          <p class="p-4 text-zinc-400">Nenhum comentário ainda.</p>
+          <p class="p-6 text-center text-zinc-400">
+            Nenhum comentário ainda. Seja o primeiro a comentar!
+          </p>
         )}
       </div>
     </div>
