@@ -1,0 +1,160 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { createSupabaseServerClient } from '@lib/supabase';
+import Button from '@components/ui/Button.astro';
+
+// 1. LÓGICA DO LADO DO SERVIDOR (SSR)
+const supabase = createSupabaseServerClient(Astro.cookies);
+
+// 2. Obtém o utilizador logado
+const { data: { user } } = await supabase.auth.getUser();
+
+// Se não houver utilizador, o middleware já deve ter redirecionado,
+// mas esta é uma verificação dupla.
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+// 3. Busca o perfil correspondente na tabela 'profiles'
+const { data: profile, error } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', user.id)
+  .single();
+
+if (error || !profile) {
+  // Se o perfil não existir (o Trigger falhou), é um problema
+  return new Response("Erro: Perfil não encontrado.", { status: 500 });
+}
+
+// 4. (O upload do Avatar virá aqui na próxima fase)
+---
+
+<BaseLayout title="Editar Perfil" description="Atualize os seus dados">
+  <div class="max-w-2xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Editar Perfil</h1>
+
+    <form id="profile-form" class="mt-8 flex flex-col gap-4">
+      <div id="success-message" class="hidden p-3 rounded-md bg-green-800 border border-green-600 text-green-100">
+        Perfil atualizado com sucesso!
+      </div>
+
+      <div>
+        <label for="email" class="block text-sm font-medium text-zinc-300 mb-1">
+          Email
+        </label>
+        <input
+          type="email"
+          id="email"
+          value={user.email}
+          disabled
+          class="input-style w-full bg-zinc-800 border-zinc-700 cursor-not-allowed"
+        />
+        <p class="text-xs text-zinc-400 mt-1">O email não pode ser alterado.</p>
+      </div>
+
+      <div>
+        <label for="full_name" class="block text-sm font-medium text-zinc-300 mb-1">
+          Nome Completo
+        </label>
+        <input
+          type="text"
+          id="full_name"
+          name="full_name"
+          value={profile.full_name}
+          class="input-style w-full"
+        />
+      </div>
+
+      <div>
+        <label for="bio" class="block text-sm font-medium text-zinc-300 mb-1">
+          Bio
+        </label>
+        <textarea
+          id="bio"
+          name="bio"
+          rows="4"
+          class="input-style w-full resize-none"
+        >{profile.bio}</textarea>
+      </div>
+      
+      <div class="flex justify-end">
+        <Button type="submit" variant="primary" id="submit-button">
+          Salvar Alterações
+        </Button>
+      </div>
+    </form>
+  </div>
+</BaseLayout>
+
+<script>
+  import { supabase } from '@lib/supabase'; // Cliente vanilla
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('profile-form');
+    if (form) {
+      const submitButton = form.querySelector('#submit-button');
+      const successMessage = document.getElementById('success-message');
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!submitButton || !successMessage) return;
+
+        // Desativa o botão
+        submitButton.setAttribute('disabled', 'true');
+        submitButton.innerHTML = 'Salvando...';
+        successMessage.classList.add('hidden');
+
+        // Coleta os novos dados
+        const formData = new FormData(form as HTMLFormElement);
+        const newFullName = formData.get('full_name') as string;
+        const newBio = formData.get('bio') as string;
+
+        // Obtém o utilizador atual (do cliente)
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          alert("Erro: Utilizador não encontrado. Faça login novamente.");
+          window.location.href = '/login';
+          return;
+        }
+
+        // 7. Executa o UPDATE na tabela 'profiles'
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: newFullName,
+            bio: newBio
+          })
+          .eq('id', user.id); // Onde o ID == o nosso ID
+
+        if (profileError) {
+          alert("Erro ao atualizar o perfil (DB): " + (profileError?.message ?? ""));
+          submitButton.removeAttribute('disabled');
+          submitButton.innerHTML = 'Salvar Alterações';
+          return; // Para a execução aqui
+        }
+
+        // 8. (NOVO PASSO) Atualiza o 'user_metadata' no Auth
+        //    Isto atualiza o cookie da sessão
+        const { error: authError } = await supabase.auth.updateUser({
+          data: {
+            full_name: newFullName
+          }
+        });
+
+        if (authError) {
+          alert("Erro ao atualizar o perfil (Auth): " + (authError?.message ?? ""));
+          submitButton.removeAttribute('disabled');
+          submitButton.innerHTML = 'Salvar Alterações';
+          return; // Para a execução aqui
+        }
+
+        // 9. (LÓGICA DE SUCESSO MODIFICADA)
+        //    Em vez de mostrar uma mensagem, recarregamos a página.
+        //    O servidor (middleware) irá agora ler o cookie atualizado
+        //    e a Navbar irá mostrar o novo nome.
+        window.location.reload();
+      });
+    }
+  });
+</script>
