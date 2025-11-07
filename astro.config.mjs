@@ -1,12 +1,23 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import { fileURLToPath } from 'node:url';
+import vercel from '@astrojs/vercel'; // <-- IMPORTAR O ADAPTADOR VERCEL
+import { supabase } from '@supabase/auth-helpers-astro'; // <-- IMPORTAR A INTEGRAÇÃO SUPABASE
 import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
-  integrations: [],
+  
+  // 1. DEFINIR O ADAPTADOR CORRETO
+  adapter: vercel(), 
+  
+  // 2. ADICIONAR A INTEGRAÇÃO DO SUPABASE
+  integrations: [
+    supabase()
+  ],
+  
+  // (O resto da sua configuração de vite/alias está correta)
   vite: {
     plugins: [tailwindcss()],
     resolve: {
