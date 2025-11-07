@@ -14,10 +14,26 @@ export const onRequest = async (context: APIContext, next: MiddlewareNext) => {
       cookies: {
         get: (name: string) => context.cookies.get(name)?.value,
         set: (name: string, value: string, options?: any) => {
-          context.cookies.set(name, value, { ...(options ?? {}), path: options?.path ?? '/' });
+          const isProd = import.meta.env.PROD;
+          const base = options ?? {};
+          context.cookies.set(name, value, {
+            ...base,
+            path: base.path ?? '/',
+            httpOnly: base.httpOnly ?? true,
+            sameSite: base.sameSite ?? 'lax',
+            secure: base.secure ?? (isProd ? true : false),
+          });
         },
         remove: (name: string, options?: any) => {
-          context.cookies.delete(name, { ...(options ?? {}), path: options?.path ?? '/' });
+          const isProd = import.meta.env.PROD;
+          const base = options ?? {};
+          context.cookies.delete(name, {
+            ...base,
+            path: base.path ?? '/',
+            httpOnly: base.httpOnly ?? true,
+            sameSite: base.sameSite ?? 'lax',
+            secure: base.secure ?? (isProd ? true : false),
+          });
         },
       },
     }
@@ -35,7 +51,7 @@ export const onRequest = async (context: APIContext, next: MiddlewareNext) => {
   // 3. Lógica de proteção de rotas
   const currentPath = context.url.pathname;
   const isProtectedRoute = protectedRoutes.some(
-    (route) => (currentPath.startsWith(route) && route.length > 1) || currentPath === '/'
+    (route) => currentPath === route || currentPath.startsWith(route + '/')
   );
   const isAuthRoute = authRoutes.includes(currentPath);
 
